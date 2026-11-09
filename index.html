@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#171226">
+<title>search-door</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚪</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Karla:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { font-family: 'Karla', system-ui, sans-serif; background: #120e1c; color: #f3e9d2; overflow: hidden; }
+
+  #hall { position: absolute; inset: 0; overflow: hidden; background: linear-gradient(180deg, #161022 0%, #221733 52%, #150f24 100%); transition: background 0.9s ease; }
+  #hall.won { background: linear-gradient(180deg, #271410 0%, #3c1f12 60%, #271410 100%); }
+
+  #candle { position: absolute; left: 50%; bottom: -14%; width: 70vmax; height: 78vmax; transform: translateX(-50%); background: radial-gradient(ellipse at 50% 115%, rgba(255,179,92,.34), rgba(255,120,60,.10) 42%, transparent 68%); pointer-events: none; animation: flick 3.2s ease-in-out infinite alternate; }
+  @keyframes flick { from { opacity: 0.65; } to { opacity: 1; } }
+
+  #dust { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+  .dust { position: absolute; bottom: -12px; background: #e8dcc8; border-radius: 50%; opacity: 0.45; animation: rise linear infinite; }
+  @keyframes rise { to { transform: translateY(-105vh) translateX(24px); opacity: 0; } }
+
+  #doors { position: absolute; left: 50%; bottom: 13%; transform: translateX(-50%); display: flex; align-items: flex-end; gap: clamp(6px, 2vw, 20px); perspective: 700px; z-index: 3; }
+  .door { position: relative; width: clamp(38px, 8.5vw, 82px); height: clamp(56px, 12vh, 104px); cursor: pointer; z-index: 2; }
+  .door-frame { position: absolute; inset: 0; background: linear-gradient(155deg, #4d3c61, #37294a); border-radius: 9px; box-shadow: inset 0 0 0 3px #211732, inset 0 -6px 12px rgba(0,0,0,.45), 0 14px 30px rgba(0,0,0,.55); }
+  .door-leaf { position: absolute; left: 0; top: 0; width: 86%; height: 96%; background: var(--leaf); border-radius: 4px; transform-origin: left center; transform: rotateY(0deg); transition: transform 0.7s cubic-bezier(0.65, 0, 0.35, 1.15); }
+  .door.open .door-leaf { transform: rotateY(-72deg); }
+  .door-leaf .panel { position: absolute; left: 8%; right: 8%; height: 17%; background: rgba(22,12,30,.25); border-radius: 3px; }
+  .door-leaf .p1 { top: 11%; }
+  .door-leaf .p2 { top: 39%; }
+  .door-knob { position: absolute; right: 10%; top: 50%; width: 9px; height: 9px; margin-top: -4.5px; background: #e9c47e; border-radius: 50%; box-shadow: 0 0 8px rgba(233,196,126,.85); }
+  .door[data-goal="true"] .door-knob { background: #ffe1a1; box-shadow: 0 0 12px 2px rgba(255,214,140,.9); }
+  .door-glow { position: absolute; inset: -10px; border-radius: 50%; background: radial-gradient(ellipse at 50% 85%, rgba(255,186,108,.55), rgba(255,140,70,.12) 55%, transparent 72%); opacity: 0; transition: opacity 0.6s; pointer-events: none; z-index: 4; }
+  .door.open .door-glow { opacity: 1; }
+
+  #creature { position: absolute; top: 0; left: 0; width: 46px; height: 46px; z-index: 6; pointer-events: none; }
+  #creature .critter-anim { position: absolute; inset: 0; }
+  #creature svg { display: block; width: 100%; height: 100%; }
+  #creature .critter-anim.bob { animation: bob 1.8s ease-in-out infinite; }
+  #creature .critter-anim.wave { animation: wave 0.55s ease-in-out; }
+  #creature .critter-anim.droop { animation: droop 0.45s ease-in-out; }
+  #creature .critter-anim.dance { animation: dance 0.45s ease-in-out infinite; }
+  @keyframes bob { 50% { transform: translateY(-5px); } }
+  @keyframes wave { 0%, 100% { transform: rotate(0deg); } 20% { transform: rotate(9deg); } 40% { transform: rotate(-4deg); } 60% { transform: rotate(5deg); } 80% { transform: rotate(-6deg); } }
+  @keyframes droop { 50% { transform: scale(0.9); } }
+  @keyframes dance { 50% { transform: scale(0.92, 1.1) rotate(-5deg); } }
+
+  #vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 55%, rgba(10,6,18,0.55) 100%); pointer-events: none; z-index: 8; }
+
+  #hud { position: absolute; top: 18px; left: 0; right: 0; text-align: center; z-index: 10; font-family: 'Karla'; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; font-size: 0.72rem; color: rgba(246,234,210,0.55); }
+
+  #title-screen, #win-overlay { position: absolute; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center; }
+  #title-screen.show, #win-overlay.show { display: flex; }
+  .card { background: rgba(22,14,36,0.82); border: 1px solid rgba(255,214,150,0.18); border-radius: 20px; padding: 2.2rem 3rem; text-align: center; box-shadow: 0 30px 80px rgba(0,0,0,0.6); backdrop-filter: blur(6px); }
+  #win-overlay .card { background: rgba(30,18,26,0.86); border-color: rgba(255,190,110,0.35); }
+  .card h1, .card h2 { font-family: 'Fraunces', Georgia, serif; font-weight: 900; margin-bottom: 0.4em; }
+  #title-screen h1 { font-size: clamp(2.6rem, 9vw, 5.2rem); letter-spacing: -0.02em; color: #f6ead2; text-shadow: 0 4px 30px rgba(255,150,90,0.25); }
+  #win-overlay h2 { font-size: clamp(1.8rem, 5vw, 2.8rem); color: #f6ead2; }
+  .tagline { font-family: 'Karla'; color: rgba(246,234,210,0.65); margin: 0.6em 0 1.6em; letter-spacing: 0.02em; }
+  #win-text { font-family: 'Karla'; color: rgba(246,234,210,0.7); margin-bottom: 1.8em; }
+  .btn { font-family: 'Karla'; font-weight: 700; font-size: 1rem; letter-spacing: 0.04em; color: #241332; background: linear-gradient(180deg, #ffbe6b, #f08c3c); border: none; padding: 0.9em 2em; border-radius: 999px; cursor: pointer; box-shadow: 0 8px 24px rgba(240,140,60,0.35), inset 0 1px 0 rgba(255,255,255,0.5); transition: transform 0.15s; }
+  .btn:hover { transform: scale(1.05); }
+
+  @media (prefers-reduced-motion: reduce) {
+    #creature svg { animation: none; }
+  }
+</style>
+</head>
+<body>
+<div id="hall">
+  <div id="dust"></div>
+  <div id="candle"></div>
+  <div id="doors">
+    <div class="door" data-i="0" style="--leaf:#e8b4b8">
+      <div class="door-frame"><div class="door-leaf"><div class="panel p1"></div><div class="panel p2"></div><div class="door-knob"></div></div></div>
+      <div class="door-glow"></div>
+    </div>
+    <div class="door" data-i="1" style="--leaf:#aecbf0">
+      <div class="door-frame"><div class="door-leaf"><div class="panel p1"></div><div class="panel p2"></div><div class="door-knob"></div></div></div>
+      <div class="door-glow"></div>
+    </div>
+    <div class="door" data-i="2" style="--leaf:#b5dfc2">
+      <div class="door-frame"><div class="door-leaf"><div class="panel p1"></div><div class="panel p2"></div><div class="door-knob"></div></div></div>
+      <div class="door-glow"></div>
+    </div>
+    <div class="door" data-i="3" style="--leaf:#f2cf9b">
+      <div class="door-frame"><div class="door-leaf"><div class="panel p1"></div><div class="panel p2"></div><div class="door-knob"></div></div></div>
+      <div class="door-glow"></div>
+    </div>
+    <div class="door" data-i="4" style="--leaf:#cdb4e6">
+      <div class="door-frame"><div class="door-leaf"><div class="panel p1"></div><div class="panel p2"></div><div class="door-knob"></div></div></div>
+      <div class="door-glow"></div>
+    </div>
+    <div class="door" data-i="5" style="--leaf:#f0b8c6">
+      <div class="door-frame"><div class="door-leaf"><div class="panel p1"></div><div class="panel p2"></div><div class="door-knob"></div></div></div>
+      <div class="door-glow"></div>
+    </div>
+    <div class="door" data-i="6" style="--leaf:#c2e6d8">
+      <div class="door-frame"><div class="door-leaf"><div class="panel p1"></div><div class="panel p2"></div><div class="door-knob"></div></div></div>
+      <div class="door-glow"></div>
+    </div>
+  </div>
+  <div id="creature">
+    <div class="critter-anim">
+      <svg viewBox="0 0 64 64" width="64" height="64">
+        <g>
+          <ellipse cx="32" cy="40" rx="18" ry="15" fill="#f2a541"/>
+          <path d="M15 37 L5 31" stroke="#cf8420" stroke-width="4.5" stroke-linecap="round"/>
+          <path d="M49 37 L59 31" stroke="#cf8420" stroke-width="4.5" stroke-linecap="round"/>
+          <circle cx="25" cy="33" r="4.2" fill="#fff7ea"/>
+          <circle cx="39" cy="33" r="4.2" fill="#fff7ea"/>
+          <circle cx="26" cy="34" r="2" fill="#2a1c30"/>
+          <circle cx="38" cy="34" r="2" fill="#2a1c30"/>
+          <path d="M25 43 Q32 49 39 43" stroke="#8a4b12" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <ellipse cx="23" cy="55.5" rx="6" ry="3.4" fill="#cf8420"/>
+          <ellipse cx="41" cy="55.5" rx="6" ry="3.4" fill="#cf8420"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+  <div id="vignette"></div>
+</div>
+<div id="hud"></div>
+<div id="title-screen">
+  <div class="card">
+    <h1>search-door</h1>
+    <p class="tagline">one of these doors leads home.</p>
+    <button class="btn" id="knock">Open a door</button>
+  </div>
+</div>
+<div id="win-overlay">
+  <div class="card">
+    <h2 id="win-title">You found the way home.</h2>
+    <p class="tagline">the little door knew. it always knew.</p>
+    <button class="btn" id="again">Knock again</button>
+  </div>
+</div>
+<script>
+  const hall = document.getElementById('hall');
+  const creature = document.getElementById('creature');
+  const animLayer = creature.querySelector('.critter-anim');
+  const titleScreen = document.getElementById('title-screen');
+  const winOverlay = document.getElementById('win-overlay');
+  const winTitle = document.getElementById('win-title');
+  const againBtn = document.getElementById('again');
+  const knockBtn = document.getElementById('knock');
+  const hud = document.getElementById('hud');
+  const doors = Array.from(document.querySelectorAll('.door'));
+
+  let goalIndex = 3;
+  let openedCount = 0;
+  let ctx;
+
+  function ac() {
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+
+  function tone(f0, f1, dur, type, vol, delay) {
+    delay = delay || 0;
+    const c = ac();
+    const t = c.currentTime + delay;
+    const o = c.createOscillator();
+    const g = c.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(f0, t);
+    if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(Math.max(f1, 1), t + dur);
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g);
+    g.connect(c.destination);
+    o.start(t);
+    o.stop(t + dur + 0.05);
+  }
+
+  function sOpen() { tone(220, 760, 0.5, 'sawtooth', 0.045); tone(110, 150, 0.35, 'square', 0.02); }
+  function sSad() { tone(340, 180, 0.35, 'sine', 0.09); }
+  function sWin() { [523, 659, 784, 1046, 1319].forEach(function (f, i) { tone(f, f * 0.92, 0.22, 'triangle', 0.12, i * 0.09); }); }
+
+  function pickGoal() {
+    goalIndex = Math.floor(Math.random() * doors.length);
+    doors.forEach(function (d, i) { d.dataset.goal = i === goalIndex ? 'true' : 'false'; });
+  }
+
+  function land(x, y) {
+    return new Promise(function (res) {
+      const anim = creature.animate([
+        { transform: 'translate(' + x + 'px, ' + y + 'px)' },
+        { transform: 'translate(' + x + 'px, ' + (y - 56) + 'px) scale(1.12, 0.9)', offset: 0.35 },
+        { transform: 'translate(' + x + 'px, ' + y + 'px) scale(1, 1)' }
+      ], { duration: 560, easing: 'ease-out' });
+      anim.onfinish = function () { res(); };
+    });
+  }
+
+  function toLocal(el) {
+    const h = hall.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    return { x: r.left - h.left + r.width / 2, y: r.top - h.top + r.height / 2 };
+  }
+
+  function setCreatureState(state) {
+    animLayer.classList.remove('wave', 'droop', 'dance');
+    if (state === 'wave') animLayer.classList.add('wave');
+    if (state === 'droop') { animLayer.classList.add('droop'); setTimeout(function () { animLayer.classList.remove('droop'); }, 480); }
+    if (state === 'dance') animLayer.classList.add('dance');
+  }
+
+  function openDoor(i) {
+    const door = doors[i];
+    if (door.classList.contains('open')) return;
+    door.classList.add('open');
+    openedCount++;
+    hud.textContent = 'door ' + openedCount + ' of ' + doors.length;
+    ac();
+    sOpen();
+    const p = toLocal(door);
+    land(p.x, p.y).then(function () {
+      if (i === goalIndex) {
+        sWin();
+        setCreatureState('dance');
+        setTimeout(function () {
+          hall.classList.add('won');
+          winOverlay.classList.add('show');
+          winTitle.textContent = 'You found the way home.';
+        }, 850);
+      } else {
+        sSad();
+        setCreatureState('droop');
+      }
+    });
+  }
+
+  function startRun() {
+    doors.forEach(function (d) { d.classList.remove('open'); delete d.dataset.opened; });
+    openedCount = 0;
+    hud.textContent = '';
+    pickGoal();
+    hall.classList.remove('won');
+    winOverlay.classList.remove('show');
+    titleScreen.classList.remove('show');
+    const p = toLocal(doors[0]);
+    creature.style.transform = 'translate(' + p.x + 'px, ' + p.y + 'px)';
+    setCreatureState('idle');
+  }
+
+  knockBtn.addEventListener('click', function () { ac(); titleScreen.classList.remove('show'); startRun(); });
+  againBtn.addEventListener('click', function () { ac(); startRun(); });
+  doors.forEach(function (d, i) { d.addEventListener('click', function () { openDoor(i); }); });
+
+  for (let i = 0; i < 16; i++) {
+    const d = document.createElement('div');
+    d.className = 'dust';
+    d.style.left = Math.random() * 100 + '%';
+    d.style.animationDuration = (9 + Math.random() * 14) + 's';
+    d.style.animationDelay = (-Math.random() * 20) + 's';
+    d.style.width = (2 + Math.random() * 3) + 'px';
+    d.style.height = d.style.width;
+    document.getElementById('dust').appendChild(d);
+  }
+
+  pickGoal();
+  titleScreen.classList.add('show');
+  const p0 = toLocal(doors[0]);
+  creature.style.transform = 'translate(' + p0.x + 'px, ' + p0.y + 'px)';
+</script>
+</body>
+</html>
